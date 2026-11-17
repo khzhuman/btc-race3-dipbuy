@@ -67,7 +67,16 @@ await runBars({
       }
     }
 
-    const qty = state.positions.get(SYMBOL)?.qty ?? 0n;
+    const position = state.positions.get(SYMBOL);
+    const qty = position?.qty ?? 0n;
+
+    // Safety net: if a buy filled but its fill line never arrived, derive
+    // the entry price from the position's cost (fees included, so this is a
+    // touch above the true fill and the take-profit only triggers later).
+    if (qty > 0n && entryPrice === 0n && position !== undefined && position.cost > 0n) {
+      entryPrice = (position.cost * 10000000n) / qty;
+      everTraded = true;
+    }
 
     // Flat: hunt for a dip from the rolling peak, or the late fallback.
     if (qty === 0n) {
